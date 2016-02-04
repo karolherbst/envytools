@@ -78,17 +78,63 @@ void *t64watchfun(void *x) {
 
 void state_auto(uint32_t val, uint64_t time)
 {
-	static uint64_t start = 0ull;
+	static enum {
+		STATE_INV,
+		STATE_IDLE,
+		STATE_RUN
+	} state = STATE_INV;
+	static uint64_t auto_start = 0ull;
+	static uint64_t save_start = 0ull;
+	static uint64_t load_start = 0ull;
+	static uint64_t save_diff = 0ull;
+	static uint64_t load_diff = 0ull;
 
 	uint64_t diff;
 
-	if (!start && (val & 0x00000010))
-		start = time;
+	switch (state) {
+	case STATE_INV:
+		if (val == 0)
+			state = STATE_IDLE;
+		break;
 
-	if (start && (val & 0x00000010) == 0) {
-		diff = time - start;
-		start = 0ull;
-		printf("AUTO: %016"PRIu64"\n", diff);
+	case STATE_IDLE:
+		if (!(val & 0x00000010))
+			break;
+
+		auto_start = time;
+		state = STATE_RUN;
+		/* no break */
+	case STATE_RUN:
+		if (!save_start && (val & 0x00000080)) {
+			save_start = time;
+		} else if(save_start && !(val & 0x00000080)) {
+			save_diff = time - save_start;
+			save_start = 0ull;
+		}
+
+		if (!load_start && (val & 0x00000040)) {
+			load_start = time;
+		} else if(load_start && !(val & 0x00000040)) {
+			load_diff = time - load_start;
+			load_start = 0ull;
+		}
+
+		if (!(val & 0x00000010)) {
+			/* print results */
+			diff = time - auto_start;
+			printf("%"PRIu64",%"PRIu64",%"PRIu64"\n", diff, save_diff, load_diff);
+
+			auto_start = 0ull;
+			save_start = 0ull;
+			load_start = 0ull;
+			save_diff = 0ull;
+			load_diff = 0ull;
+
+			state = STATE_IDLE;
+		}
+		break;
+	default:
+		break;
 	}
 }
 
@@ -117,14 +163,11 @@ int main(int argc, char **argv) {
 	pthread_t thr;
 	pthread_create(&thr, 0, t64watchfun, 0);
 
-	uint64_t ptime64 = 0;
 	while (1) {
 		while (get == put)
 			sched_yield();
 
-		//printf("%016"PRIu64"[+%"PRIu64"]: %08x\n", tqueue64[get], tqueue64[get]-ptime64, queue[get]);
 		state_auto(queue[get],tqueue64[get]);
-		ptime64 = tqueue64[get];
 
 		get = (get + 1) % SZ;
 	}
