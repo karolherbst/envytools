@@ -44,6 +44,11 @@ volatile int get = 0, put = 0;
 
 #define NVE0_HUB_SCRATCH_7                                 0x0040981c
 
+struct nva_interval {
+	uint64_t start;
+	uint64_t diff;
+};
+
 uint64_t get_time(unsigned int card)
 {
 	uint64_t low;
@@ -76,6 +81,17 @@ void *t64watchfun(void *x) {
 	return NULL;
 }
 
+void state_time(uint32_t val, uint32_t mask, uint64_t time,
+		struct nva_interval *intv) {
+
+	if (!intv->start && (val & mask) == mask) {
+		intv->start = time;
+	} else if(intv->start && (val & mask) == 0) {
+		intv->diff = time - intv->start;
+		intv->start = 0ull;
+	}
+}
+
 void state_auto(uint32_t val, uint64_t time)
 {
 	static enum {
@@ -84,10 +100,8 @@ void state_auto(uint32_t val, uint64_t time)
 		STATE_RUN
 	} state = STATE_INV;
 	static uint64_t auto_start = 0ull;
-	static uint64_t save_start = 0ull;
-	static uint64_t load_start = 0ull;
-	static uint64_t save_diff = 0ull;
-	static uint64_t load_diff = 0ull;
+	static struct nva_interval save = {0ull, 0ull};
+	static struct nva_interval load = {0ull, 0ull};
 
 	uint64_t diff;
 
@@ -105,30 +119,20 @@ void state_auto(uint32_t val, uint64_t time)
 		state = STATE_RUN;
 		/* no break */
 	case STATE_RUN:
-		if (!save_start && (val & 0x00000080)) {
-			save_start = time;
-		} else if(save_start && !(val & 0x00000080)) {
-			save_diff = time - save_start;
-			save_start = 0ull;
-		}
-
-		if (!load_start && (val & 0x00000040)) {
-			load_start = time;
-		} else if(load_start && !(val & 0x00000040)) {
-			load_diff = time - load_start;
-			load_start = 0ull;
-		}
+		state_time(val, 0x00000080, time, &save);
+		state_time(val, 0x00000080, time, &load);
 
 		if (!(val & 0x00000010)) {
 			/* print results */
 			diff = time - auto_start;
-			printf("%"PRIu64",%"PRIu64",%"PRIu64"\n", diff, save_diff, load_diff);
+			printf("%"PRIu64",%"PRIu64",%"PRIu64"\n", diff, save.diff,
+					load.diff);
 
 			auto_start = 0ull;
-			save_start = 0ull;
-			load_start = 0ull;
-			save_diff = 0ull;
-			load_diff = 0ull;
+			save.start = 0ull;
+			load.start = 0ull;
+			save.diff = 0ull;
+			load.diff = 0ull;
 
 			state = STATE_IDLE;
 		}
