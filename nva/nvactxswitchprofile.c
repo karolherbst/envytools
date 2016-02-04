@@ -92,6 +92,11 @@ void state_time(uint32_t val, uint32_t mask, uint64_t time,
 	}
 }
 
+#define RESET_INTV(s)	do {\
+							(s).start = 0ull; \
+							(s).diff = 0ull; \
+						} while (0)
+
 void state_auto(uint32_t val, uint64_t time)
 {
 	static enum {
@@ -102,6 +107,8 @@ void state_auto(uint32_t val, uint64_t time)
 	static uint64_t auto_start = 0ull;
 	static struct nva_interval save = {0ull, 0ull};
 	static struct nva_interval load = {0ull, 0ull};
+	static struct nva_interval save_mmctx = {0ull, 0ull};
+	static struct nva_interval load_mmctx = {0ull, 0ull};
 
 	uint64_t diff;
 
@@ -120,19 +127,21 @@ void state_auto(uint32_t val, uint64_t time)
 		/* no break */
 	case STATE_RUN:
 		state_time(val, 0x00000080, time, &save);
-		state_time(val, 0x00000080, time, &load);
+		state_time(val, 0x00000040, time, &load);
+		state_time(val, 0x00000082, time, &save_mmctx);
+		state_time(val, 0x00000042, time, &load_mmctx);
 
 		if (!(val & 0x00000010)) {
 			/* print results */
 			diff = time - auto_start;
-			printf("%"PRIu64",%"PRIu64",%"PRIu64"\n", diff, save.diff,
-					load.diff);
+			printf("%"PRIu64",%"PRIu64"(%"PRIu64"),%"PRIu64"(%"PRIu64")\n",
+					diff, save.diff, save_mmctx.diff, load.diff,load_mmctx.diff);
 
 			auto_start = 0ull;
-			save.start = 0ull;
-			load.start = 0ull;
-			save.diff = 0ull;
-			load.diff = 0ull;
+			RESET_INTV(save);
+			RESET_INTV(load);
+			RESET_INTV(save_mmctx);
+			RESET_INTV(load_mmctx);
 
 			state = STATE_IDLE;
 		}
