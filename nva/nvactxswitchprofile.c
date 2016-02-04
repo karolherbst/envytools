@@ -134,8 +134,9 @@ void state(uint32_t val, uint64_t time)
 		if (!(val & 0x00000010)) {
 			/* print results */
 			diff = time - auto_start;
-			printf("%"PRIu64",%"PRIu64"(%"PRIu64"),%"PRIu64"(%"PRIu64")\n",
-					diff, save.diff, save_mmctx.diff, load.diff,
+			printf("%016"PRIu64": %"PRIu64",%"PRIu64"(%"PRIu64"),%"PRIu64
+					"(%"PRIu64")\n",
+					time, diff, save.diff, save_mmctx.diff, load.diff,
 					load_mmctx.diff);
 
 			auto_start = 0ull;
@@ -150,6 +151,25 @@ void state(uint32_t val, uint64_t time)
 	default:
 		break;
 	}
+}
+
+void print_header()
+{
+	uint32_t dev, ctx_size;
+
+	dev = nva_rd32(cnum, 0x000000);
+	dev &= 0x1ff00000;
+	dev >>= 20;
+	printf("Card: NV%X\n", dev);
+
+	ctx_size = nva_rd32(cnum, 0x409804);
+	printf("HUB context size (rounded): %d bytes\n", ctx_size);
+
+	ctx_size = nva_rd32(cnum, 0x41a804);
+	printf("GPC context size (rounded): %d bytes\n", ctx_size);
+	printf("\n");
+
+	printf("time            : total, save (mmctx), load (mmctx)\n");
 }
 
 int main(int argc, char **argv) {
@@ -174,7 +194,7 @@ int main(int argc, char **argv) {
 
 	a = NVE0_HUB_SCRATCH_7;
 
-
+	print_header();
 
 	pthread_t thr;
 	pthread_create(&thr, 0, t64watchfun, 0);
