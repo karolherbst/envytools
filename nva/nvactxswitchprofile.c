@@ -97,7 +97,7 @@ void state_time(uint32_t val, uint32_t mask, uint64_t time,
 							(s).diff = 0ull; \
 						} while (0)
 
-void state_auto(uint32_t val, uint64_t time)
+void state(uint32_t val, uint64_t time)
 {
 	static enum {
 		STATE_INV,
@@ -135,7 +135,8 @@ void state_auto(uint32_t val, uint64_t time)
 			/* print results */
 			diff = time - auto_start;
 			printf("%"PRIu64",%"PRIu64"(%"PRIu64"),%"PRIu64"(%"PRIu64")\n",
-					diff, save.diff, save_mmctx.diff, load.diff,load_mmctx.diff);
+					diff, save.diff, save_mmctx.diff, load.diff,
+					load_mmctx.diff);
 
 			auto_start = 0ull;
 			RESET_INTV(save);
@@ -173,6 +174,8 @@ int main(int argc, char **argv) {
 
 	a = NVE0_HUB_SCRATCH_7;
 
+
+
 	pthread_t thr;
 	pthread_create(&thr, 0, t64watchfun, 0);
 
@@ -180,7 +183,7 @@ int main(int argc, char **argv) {
 		while (get == put)
 			sched_yield();
 
-		state_auto(queue[get],tqueue64[get]);
+		state(queue[get],tqueue64[get]);
 
 		get = (get + 1) % SZ;
 	}
