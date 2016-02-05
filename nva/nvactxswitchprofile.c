@@ -155,7 +155,7 @@ void state(uint32_t val, uint64_t time)
 
 void print_header()
 {
-	uint32_t dev, ctx_size;
+	uint32_t dev, ctx_size, strand_count, i;
 
 	dev = nva_rd32(cnum, 0x000000);
 	dev &= 0x1ff00000;
@@ -164,6 +164,15 @@ void print_header()
 
 	ctx_size = nva_rd32(cnum, 0x409804);
 	printf("HUB context size (rounded): %d bytes\n", ctx_size);
+
+	ctx_size = nva_rd32(cnum, 0x41a74c) << 2;
+	strand_count = nva_rd32(cnum, 0x41a880);
+
+	for (i = 0; i < strand_count; i++)
+		ctx_size += (nva_rd32(cnum, 0x41a910 + (i * 0x24)) << 2);
+
+	/* XXX: Maxwell TPC strand context data */
+	printf("GPC context size          : %d bytes\n", ctx_size);
 
 	ctx_size = nva_rd32(cnum, 0x41a804);
 	printf("GPC context size (rounded): %d bytes\n", ctx_size);
