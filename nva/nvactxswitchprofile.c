@@ -171,7 +171,7 @@ uint32_t ctxsize_strands(uint32_t reg_base)
 
 void print_header()
 {
-	uint32_t dev, gpc_cnt, gpc_size, smx_cnt, ctx_size, i;
+	uint32_t dev, gpc_cnt, gpc_size, gpc_area, smx_cnt, ctx_size, i;
 
 	dev = nva_rd32(cnum, 0x000000);
 	dev &= 0x1ff00000;
@@ -185,18 +185,23 @@ void print_header()
 	printf("GPC count          : %d\n", gpc_cnt);
 
 	gpc_size = 0;
+	gpc_area = 0;
 	for (i = 0; i < gpc_cnt; i++) {
 		ctx_size = nva_rd32(cnum, 0x50274c + (i * 0x8000)) << 2;
 		ctx_size += ctxsize_strands(0x500000 + (i * 0x8000));
 		printf("  GPC[%2u] ctx size : %d bytes\n", i, ctx_size);
 		gpc_size += ctx_size;
+
+		ctx_size = nva_rd32(cnum, 0x502804 + (i * 0x8000));
+		printf("  GPC[%2u] ctx area : %d bytes\n", i, ctx_size);
+		gpc_area += ctx_size;
 	}
 
 	/* XXX: Maxwell TPC strand context data */
-	printf("GPC context size   : %d bytes\n", ctx_size);
+	printf("GPC context size   : %d bytes\n", gpc_size);
 
 	ctx_size = nva_rd32(cnum, 0x41a804);
-	printf("GPC context area   : %d bytes\n", ctx_size);
+	printf("GPC context area   : %d bytes\n", gpc_area);
 	printf("\n");
 
 	ctx_size = nva_rd32(cnum,0x40974c) << 2;
