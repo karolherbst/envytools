@@ -153,29 +153,61 @@ void state(uint32_t val, uint64_t time)
 	}
 }
 
+uint32_t ctxsize_strands(uint32_t reg_base)
+{
+	uint32_t strand_count, strand_size = 0, io_idx, i;
+
+	strand_count = nva_rd32(cnum, reg_base + 0x2880);
+	io_idx = nva_rd32(cnum, reg_base + 0x2ffc);
+
+	for (i = 0; i < strand_count; i++) {
+		nva_wr32(cnum, reg_base + 0x2ffc, i);
+		strand_size += (nva_rd32(cnum, reg_base + 0x2910) << 2);
+	}
+	nva_wr32(cnum, reg_base + 0x2ffc, io_idx);
+
+	return strand_size;
+}
+
 void print_header()
 {
-	uint32_t dev, ctx_size, strand_count, i;
+	uint32_t dev, gpc_cnt, gpc_size, smx_cnt, ctx_size, i;
 
 	dev = nva_rd32(cnum, 0x000000);
 	dev &= 0x1ff00000;
 	dev >>= 20;
 	printf("Card: NV%X\n", dev);
 
-	ctx_size = nva_rd32(cnum, 0x409804);
-	printf("HUB context size (rounded): %d bytes\n", ctx_size);
+	smx_cnt = (nva_rd32(cnum, 0x418bb8) >> 8) & 0xff;
+	printf("SMX count          : %d\n", smx_cnt);
 
-	ctx_size = nva_rd32(cnum, 0x41a74c) << 2;
-	strand_count = nva_rd32(cnum, 0x41a880);
+	gpc_cnt = nva_rd32(cnum, 0x22430);
+	printf("GPC count          : %d\n", gpc_cnt);
 
-	for (i = 0; i < strand_count; i++)
-		ctx_size += (nva_rd32(cnum, 0x41a910 + (i * 0x24)) << 2);
+	gpc_size = 0;
+	for (i = 0; i < gpc_cnt; i++) {
+		ctx_size = nva_rd32(cnum, 0x50274c + (i * 0x8000)) << 2;
+		ctx_size += ctxsize_strands(0x500000 + (i * 0x8000));
+		printf("  GPC[%2u] ctx size : %d bytes\n", i, ctx_size);
+		gpc_size += ctx_size;
+	}
 
 	/* XXX: Maxwell TPC strand context data */
-	printf("GPC context size          : %d bytes\n", ctx_size);
+	printf("GPC context size   : %d bytes\n", ctx_size);
 
 	ctx_size = nva_rd32(cnum, 0x41a804);
-	printf("GPC context size (rounded): %d bytes\n", ctx_size);
+	printf("GPC context area   : %d bytes\n", ctx_size);
+	printf("\n");
+
+	ctx_size = nva_rd32(cnum,0x40974c) << 2;
+	ctx_size += ctxsize_strands(0x407000);
+	printf("HUB context size   : %d bytes\n", ctx_size);
+
+	printf("Total context size : %d bytes\n", ctx_size + gpc_size);
+
+	ctx_size = nva_rd32(cnum, 0x409804);
+	printf("Total context area : %d bytes\n", ctx_size);
+
 	printf("\n");
 
 	printf("time            : total, save (mmctx), load (mmctx)\n");
