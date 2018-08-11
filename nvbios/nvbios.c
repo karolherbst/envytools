@@ -1751,8 +1751,8 @@ int main(int argc, char **argv) {
 
 	if (bios->power.volt.offset && (printmask & ENVY_BIOS_PRINT_PERF)) {
 		uint8_t version = 0, entry_count = 0, entry_length = 0;
-		uint8_t header_length = 0, mask = 0, is_pwm_based = 0;
-		uint8_t gpio_use_header = 0;
+		uint8_t header_length = 0, mask = 0;
+		bool is_pwm_based = false, gpio_use_header = false, is_chil_based = false;
 		uint32_t start = bios->power.volt.offset;
 		int16_t step_uv = 0;
 		uint32_t volt_uv = 0, volt;
@@ -1788,9 +1788,18 @@ int main(int argc, char **argv) {
 			header_length = bios->data[start+1];
 			entry_length = bios->data[start+2];
 			entry_count = bios->data[start+3];	// XXX: NFI what the entries are for
-			is_pwm_based = bios->data[start+4] & 1;
-			gpio_use_header = bios->data[start+4] & 0x2;
-			if (!is_pwm_based)
+			switch (bios->data[start+4]) {
+			case 1:
+				is_chil_based = true;
+				break;
+			case 2:
+				gpio_use_header = true;
+				break;
+			case 3:
+				is_pwm_based = true;
+				break;
+			}
+			if (!is_chil_based && !is_pwm_based)
 				mask = bios->data[start+6];
 			volt_uv = le32(start+18) & 0x00ffffff;
 		}
@@ -1890,16 +1899,27 @@ int main(int argc, char **argv) {
 		} else {
 			int min_uv, max_uv;
 			if (is_pwm_based) {
-				printf("-- Mode PWM, acceptable range [%d, %d] µV, frequency %d kHz, base voltage %d µV (unk = %d), range %d µV --\n\n",
+				printf("-- Mode PWM, acceptable range [%d, %d] µV, frequency %d kHz, base voltage %d µV (unk = %d), range %d µV",
 					le32(start+10), le32(start+14), le32(start+5) / 1000000,
 					le32(start+18) & 0xfffff,
 					le32(start+18) >> 20, le32(start+22));
+				if (header_length > 27)
+					printf(", unk1a %x", le16(start+27));
+				printf(" --\n\n");
 			} else if (gpio_use_header) {
 				step_uv = le16(start+22);
 				min_uv = le32(start+10);
 				max_uv = le32(start+14);
 				printf("-- Mode GPIO (header-generated), Base voltage %d µV, voltage step %d µV, acceptable range [%d, %d] µV --\n\n",
 					volt_uv, step_uv, min_uv, max_uv);
+			} else if (is_chil_based) {
+				uint32_t freq = le32(start+18) & 0xffffff;
+				uint32_t unk_freq = le32(start+18) >> 24;
+				min_uv = le32(start+10);
+				max_uv = le32(start+14);
+				step_uv = le16(start+22);
+				printf("-- Mode CHIL PWM, acceptable range [%d, %d] µV, base voltage %d µV (unk = %d), step %d µV\n\n",
+					min_uv, max_uv, freq, unk_freq, step_uv);
 			} else {
 				printf("-- Mode GPIO (entry-based) --\n\n");
 			}
@@ -1936,7 +1956,7 @@ int main(int argc, char **argv) {
 			for (i = 0; i < entry_count; i++) {
 				volt = le32(start) & 0x001fffff;
 
-				if (is_pwm_based || gpio_use_header) {
+				if (is_pwm_based || gpio_use_header || is_chil_based) {
 					int v = le32(start);
 					if (v)
 						printf("-- entry %d, unk = %x --\n", i, v);
