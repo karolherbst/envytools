@@ -7,7 +7,7 @@ xsi:schemaLocation="http://nouveau.freedesktop.org/ rules-ng.xsd">
 <import file="fifo/nv_object.xml"/>
 
 <group name="gk104_upload">
-	<reg32 offset="0x0144" name="UNK0144"/>
+	<reg32 offset="0x0144" name="PM_TRIGGER_WFI_V"/>
 	<stripe name="UPLOAD">
 		<reg32 offset="0x0180" name="LINE_LENGTH_IN" type="uint"/>
 		<reg32 offset="0x0184" name="LINE_COUNT" type="uint"/>
@@ -27,9 +27,32 @@ xsi:schemaLocation="http://nouveau.freedesktop.org/ rules-ng.xsd">
 		<reg32 offset="0x01ac" name="DST_Y" type="uint"/>
 		<reg32 offset="0x01b0" name="EXEC">
 			<bitfield pos="0" name="LAYOUT" type="inv_memory_layout"/>
-			<bitfield low="1" high="6" name="UNK1"/>
+			<bitfield pos="1" name="REDUCTION" type="boolean"/>
+			<bitfield low="2" high="3" name="REDUCTION_FORMAT">
+				<value value="0" name="U32"/>
+				<value value="1" name="S32"/>
+			</bitfield>
+			<bitfield low="4" high="5" name="COMPLETION_TYPE">
+				<value value="0" name="FLUSH_DISABLE"/>
+				<value value="1" name="FLUSH_ONLY"/>
+				<value value="2" name="RELEASE_SEMAPHORE"/>
+			</bitfield>
+			<bitfield pos="6" name="SYSMEMBAR_DISABLE" type="boolean"/>
 			<bitfield low="8" high="9" name="BUF_NOTIFY" type="boolean"/> <!-- yes. -->
-			<bitfield low="12" high="15" name="UNK12"/>
+			<bitfield pos="12" name="SEMAPHORE_STRUCT_SIZE">
+				<value value="0" name="FOUR_WORDS"/>
+				<value value="1" name="ONE_WORD"/>
+			</bitfield>
+			<bitfield low="13" high="15" name="REDUCTION_OP">
+				<value value="0" name="ADD"/>
+				<value value="1" name="MIN"/>
+				<value value="2" name="MAX"/>
+				<value value="3" name="INC"/>
+				<value value="4" name="DEC"/>
+				<value value="5" name="AND"/>
+				<value value="6" name="OR"/>
+				<value value="7" name="XOR"/>
+			</bitfield>
 		</reg32>
 		<reg32 offset="0x01b4" name="DATA"/>
 		<reg32 offset="0x01dc" name="QUERY_ADDRESS_HIGH"/>

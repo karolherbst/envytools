@@ -17,6 +17,8 @@ add_executable(demmt
 	nvrm_decode_ioctl.c
 	nvrm_decode_mthd.c
 	nvrm_decode_query.c
+	nvuvm.c
+	nvuvm.h
 	object_state.c
 	object_g80_2d.c
 	object_g80_3d.c
@@ -51,6 +53,11 @@ if (LIBSECCOMP_FOUND)
 else (LIBSECCOMP_FOUND)
 	message("Warning: demmt won't sandbox itself because libseccomp was not found")
 endif (LIBSECCOMP_FOUND)
+
+add_definitions(
+	-I/etc/sysconfig/nvidia/NVIDIA-Linux-x86_64-390.77/kernel/nvidia-uvm/
+	-I/etc/sysconfig/nvidia/NVIDIA-Linux-x86_64-390.77/kernel/common/inc/
+)
 
 target_link_libraries(demmt rnn envy ${LIBSECCOMP_LIBRARIES})
 

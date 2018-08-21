@@ -99,9 +99,14 @@ void decode_gk104_compute_verbose(struct gpu_object *obj, struct pushbuf_decode_
 			objdata->upload.dst.address = 0;
 			objdata->upload.dst.gpu_mapping = NULL;
 		}
+
+		obj->last_data_size = 0;
 	}
 	else if (mthd == 0x01b4) // UPLOAD.DATA
 	{
+		if (obj->last_data_size < 10000)
+			obj->last_data[obj->last_data_size++] = data;
+
 		mmt_debug("data: 0x%08x\n", data);
 		if (objdata->upload.dst.gpu_mapping)
 		{
@@ -196,5 +201,46 @@ void decode_gk104_compute_verbose(struct gpu_object *obj, struct pushbuf_decode_
 			if (var)
 				varinfo_del(var);
 		}
+	}
+	else if (mthd == 0x1698 && data == 0x1) // INLINE_QMD_DATA.PROGRAM_OFFSET
+	{
+		if (!dump_cp)
+			return;
+
+		const struct disisa *isa;
+		struct varinfo *var = NULL;
+		int chipset = nvrm_get_chipset(pstate->fifo);
+		if (chipset >= 0x117)
+		{
+			if (!isa_gm107)
+				isa_gm107 = ed_getisa("gm107");
+			isa = isa_gm107;
+
+			var = varinfo_new(isa_gm107->vardata);
+
+			if (chipset >= 0x130)
+				varinfo_set_variant(var, "sm60");
+			else
+				varinfo_set_variant(var, "sm50");
+		}
+		else if (chipset >= 0xf0 || chipset == 0xea)
+		{
+			if (!isa_gk110)
+				isa_gk110 = ed_getisa("gk110");
+			isa = isa_gk110;
+		}
+		else
+		{
+			if (!isa_gf100)
+				isa_gf100 = ed_getisa("gf100");
+			isa = isa_gf100;
+
+			var = varinfo_new(isa_gf100->vardata);
+
+			varinfo_set_variant(var, "gk104");
+		}
+
+		mmt_printf("CODE:%s\n", "");
+		envydis(isa, stdout, obj->last_data, 0, obj->last_data_size * 4, var, 0, NULL, 0, colors);
 	}
 }

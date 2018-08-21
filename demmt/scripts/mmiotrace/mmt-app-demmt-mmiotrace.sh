@@ -10,6 +10,8 @@ if [ "$1" = "" ]; then
 	exit
 fi
 
+export MMAP_THRESHOLD=0
+export MALLOC_MMAP_THRESHOLD_=0
 export MMT2DEMMT=/tmp/mmt2demmt-$RANDOM
 export SYNC=/tmp/demmt2mmt-$RANDOM
 export TRACE=/sys/kernel/debug/tracing/trace_marker

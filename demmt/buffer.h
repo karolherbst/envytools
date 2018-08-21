@@ -1,6 +1,7 @@
 #ifndef DEMMT_BUFFER_H
 #define DEMMT_BUFFER_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "demmt.h"
 #include "mmt_bin_decode.h"
@@ -33,6 +34,7 @@ struct cpu_mapping
 		uint32_t offset;
 		uint32_t entries;
 		struct ib_decode_state state;
+		bool pb_pointer_found;
 	}
 	ib;
 
@@ -90,6 +92,9 @@ struct gpu_object
 
 	void *class_data;
 	void (*class_data_destroy)(struct gpu_object *gpu_obj);
+
+	uint32_t last_data[10000];
+	uint32_t last_data_size;
 };
 
 extern struct gpu_object *gpu_objects;

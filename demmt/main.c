@@ -41,6 +41,7 @@
 #include "fglrx.h"
 #include "macro.h"
 #include "nvrm.h"
+#include "nvuvm.h"
 #include "object_state.h"
 #include "util.h"
 #include "log.h"
@@ -323,7 +324,9 @@ static void demmt_open(struct mmt_open *o, void *state)
 
 		f->path = strdup((void *)o->path.data);
 
-		if (strstr(f->path, "/dev/nvidia"))
+		if (strstr(f->path, "/dev/nvidia-uvm"))
+			f->type = FDNVIDIAUVM;
+		else if (strstr(f->path, "/dev/nvidia"))
 			f->type = FDNVIDIA;
 		else if (strstr(f->path, "/dev/ati/"))
 			f->type = FDFGLRX;
@@ -426,6 +429,8 @@ static void __demmt_ioctl_pre(uint32_t fd, uint32_t id, struct mmt_buf *data, vo
 		print_raw = demmt_drm_ioctl_pre(fd, id, dir, nr, size, data, state, args, argc);
 	else if (fdtype == FDNVIDIA)
 		print_raw = nvrm_ioctl_pre(fd, id, dir, nr, size, data, state, args, argc);
+	else if (fdtype == FDNVIDIAUVM)
+		print_raw = nvuvm_ioctl_pre(fd, id, dir, nr, size, data, state, args, argc);
 	else if (fdtype == FDFGLRX)
 		print_raw = fglrx_ioctl_pre(fd, id, dir, nr, size, data, state, args, argc);
 	else
@@ -459,6 +464,8 @@ static void __demmt_ioctl_post(uint32_t fd, uint32_t id, struct mmt_buf *data,
 		print_raw = demmt_drm_ioctl_post(fd, id, dir, nr, size, data, ret, err, state, args, argc);
 	else if (fdtype == FDNVIDIA)
 		print_raw = nvrm_ioctl_post(fd, id, dir, nr, size, data, ret, err, state, args, argc);
+	else if (fdtype == FDNVIDIAUVM)
+		print_raw = nvuvm_ioctl_post(fd, id, dir, nr, size, data, ret, err, state, args, argc);
 	else if (fdtype == FDFGLRX)
 		print_raw = fglrx_ioctl_post(fd, id, dir, nr, size, data, ret, err, state, args, argc);
 	else

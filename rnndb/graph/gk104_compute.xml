@@ -9,6 +9,36 @@ xsi:schemaLocation="http://nouveau.freedesktop.org/ rules-ng.xsd">
 <import file="g80_defs.xml"/>
 <import file="graph/gk104_p2mf.xml"/>
 
+<group name="qmd">
+	<reg32 offset="0x10" name="DATA_10">
+		<bitfield low="0" high="6" name="QMD_GROUP_ID"/>
+		<bitfield pos="7" name="SM_GLOBAL_CACHING_ENABLE" type="boolean"/>
+		<bitfield pos="8" name="RUN_CTA_IN_ONE_SM_PARTITION" type="boolean"/>
+		<bitfield pos="9" name="IS_QUEUE" type="boolean"/>
+		<bitfield pos="10" name="ADD_TO_HEAD_OF_QMD_GROUP_LINKED_LIST" type="boolean"/>
+	</reg32>
+	<reg32 offset="0x14" name="CIRCULAR_QUEUE_SIZE"/>
+	<reg32 offset="0x20" name="PROGRAM_OFFSET"/>
+	<reg32 offset="0x2c" name="DATA_2C">
+		<bitfield low="0" high="6" name="CWD_REFERENCE_COUNT_ID"/>
+		<bitfield low="7" high="15" name="CWD_REFERENCE_COUNT_DELTA_MINUS_ONE"/>
+		<bitfield pos="16" name="RELEASE_MEMBAR_TYPE">
+			<value value="0" name="FE_NONE"/>
+			<value value="1" name="FE_SYSMEMBAR"/>
+		</bitfield>
+		<bitfield pos="26" name="API_VISIBLE_CALL_LIMIT">
+			<value value="0" name="32"/>
+			<value value="1" name="NO_CHECK"/>
+		</bitfield>
+	</reg32>
+	<reg32 offset="0x78" name="DATA_78">
+		<bitfield low="24" high="31" name="REGISTER_COUNT"/>
+	</reg32>
+	<reg32 offset="0x7c" name="DATA_7C">
+		<bitfield low="24" high="31" name="SASS_VERSION"/>
+	</reg32>
+</group>
+
 <domain name="SUBCHAN" bare="yes">
 	<stripe prefix="obj-class" variants="GK104_COMPUTE-">
 		<doc>State that also exists on GK104_3D (like CODE,TEMP,TIC,TSC_ADDRESS)
@@ -60,6 +90,13 @@ xsi:schemaLocation="http://nouveau.freedesktop.org/ rules-ng.xsd">
 			<bitfield low="0" high="7" name="MINOR"/>
 			<bitfield low="8" high="15" name="MAJOR"/>
 		</reg32>
+		<reg32 offset="0x0318" name="QMD_ADDRESS_UPPER" variants="GP100_COMPUTE-"/>
+		<reg32 offset="0x031c" name="QMD_ADDRESS_LOWER" variants="GP100_COMPUTE-"/>
+
+		<array name="INLINE_QMD" offset="0x0320" stride="0x100" length="1" variants="GP100_COMPUTE-">
+			<use-group name="qmd"/>
+		</array>
+
 		<reg32 offset="0x0500" name="FIRMWARE" length="0x20"/>
 		<reg32 offset="0x077c" name="LOCAL_BASE"/><!-- 32 bit address, not shifted, appears in $lbase -->
 		<reg32 offset="0x0790" name="TEMP_ADDRESS_HIGH"/>

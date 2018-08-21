@@ -40,7 +40,6 @@ struct nvrm_device
 {
 	int chipset;
 	int fifos;
-	bool pb_pointer_found;
 };
 
 static inline struct nvrm_device *nvrm_dev(struct gpu_object *dev)
@@ -254,34 +253,6 @@ int nvrm_get_chipset(struct gpu_object *obj)
 	demmt_abort();
 }
 
-bool nvrm_get_pb_pointer_found(struct gpu_object *obj)
-{
-	struct gpu_object *dev = nvrm_get_device(obj);
-
-	assert(dev);
-
-	struct nvrm_device *ndev = nvrm_dev(dev);
-	assert(ndev);
-	if (!ndev)
-		return false;
-
-	return ndev->pb_pointer_found;
-}
-
-void nvrm_device_set_pb_pointer_found(struct gpu_object *obj, bool pb_pointer_found)
-{
-	struct gpu_object *dev = nvrm_get_device(obj);
-
-	assert(dev);
-	struct nvrm_device *ndev = nvrm_dev(dev);
-	if (!ndev) {
-		nvrm_get_chipset(obj);
-		ndev = nvrm_dev(dev);
-	}
-	assert(ndev);
-	ndev->pb_pointer_found = pb_pointer_found;
-}
-
 static struct gpu_object *nvrm_add_object(uint32_t fd, uint32_t cid, uint32_t parent, uint32_t handle, uint32_t class_)
 {
 	struct gpu_object *obj = gpu_object_add(fd, cid, parent, handle, class_);
@@ -345,7 +316,7 @@ static void nvrm_destroy_gpu_object(uint32_t fd, uint32_t cid, uint32_t parent, 
 }
 
 static int cid_not_found = 0;
-static void check_cid(uint32_t cid)
+void check_cid(uint32_t cid)
 {
 	if (cid_not_found && gpu_object_find(cid, cid) == NULL)
 	{
@@ -461,7 +432,7 @@ static void handle_nvrm_ioctl_create_dma(uint32_t fd, struct nvrm_ioctl_create_d
 	nvrm_add_object(fd, s->cid, s->parent, s->handle, s->cls);
 }
 
-static void host_map(struct gpu_object *obj, uint32_t fd, uint64_t mmap_offset,
+void host_map(struct gpu_object *obj, uint32_t fd, uint64_t mmap_offset,
 		uint64_t object_offset, uint64_t length, uint32_t subdev,
 		uint64_t map_id)
 {
@@ -769,7 +740,10 @@ static void handle_nvrm_ioctl_call(struct nvrm_ioctl_call *s, struct mmt_memory_
 	if (!data)
 		return;
 
-	if (s->mthd == NVRM_MTHD_FIFO_IB_OBJECT_INFO || s->mthd == NVRM_MTHD_FIFO_IB_OBJECT_INFO2)
+	if (s->mthd == NVRM_MTHD_FIFO_IB_OBJECT_INFO ||
+	    s->mthd == NVRM_MTHD_FIFO_IB_OBJECT_INFO2 ||
+	    s->mthd == NVRM_MTHD_FIFO_IB_OBJECT_INFO3 ||
+	    s->mthd == NVRM_MTHD_FIFO_IB_OBJECT_INFO4)
 	{
 		struct nvrm_mthd_fifo_ib_object_info *mthd_data = (void *) data->data;
 		struct gpu_object *obj = gpu_object_find(s->cid, s->handle);
